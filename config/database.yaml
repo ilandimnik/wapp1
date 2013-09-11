@@ -1,0 +1,12 @@
+development:
+  db_url: localhost  
+  db_name: webgo_development
+
+testing:
+  db_url: localhost  
+  db_name: webgo_testing 
+
+production:
+  db_url: localhost  
+  db_name: webgo_production
+

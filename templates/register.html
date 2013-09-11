@@ -1,0 +1,10 @@
+{{ define "content" }}
+    <div class="container">
+      <form class="form-signin" action="{{ reverse "signup_route" }}" method="POST">
+        <h2 class="form-signin-heading">Please sign up</h2>
+        <input type="text" class="form-control" placeholder="Email address" name="email" autofocus>
+        <input type="password" class="form-control" placeholder="Password" name="password">
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign up</button>
+      </form>
+    </div> <!-- /container -->
+{{ end }}
