@@ -16,5 +16,6 @@
 
 #ignore images in public data folder
 /public/data/*.*
+wapp1
 
 
