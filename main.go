@@ -1,15 +1,14 @@
 package main
 
 import (
+  "encoding/gob"
   "github.com/gorilla/mux"
   "github.com/gorilla/sessions"
-  "net/http"
-  "encoding/gob"
   "labix.org/v2/mgo"
   "labix.org/v2/mgo/bson"
   "log"
+  "net/http"
 )
-
 
 func init() {
   gob.Register(bson.ObjectId(""))
@@ -41,11 +40,14 @@ func main() {
   router = mux.NewRouter()
 
   //--- Router initialization
-  router.HandleFunc("/",         makeHandler(homeHandler)).Methods("GET").Name("homepage_route")
-  router.HandleFunc("/register", makeHandler(handleNewUser)).Methods("GET").Name("signup_route") 
+  router.HandleFunc("/", makeHandler(homeHandler)).Methods("GET").Name("homepage_route")
+  router.HandleFunc("/register", makeHandler(handleNewUser)).Methods("GET").Name("signup_route")
   router.HandleFunc("/register", makeHandler(handleCreateUser)).Methods("POST")
-  router.HandleFunc("/logout",   makeHandler(handleLogout)).Methods("GET").Name("logout_route")
-  router.HandleFunc("/login",    makeHandler(handleLogin)).Methods("POST").Name("login_route")
+  router.HandleFunc("/logout", makeHandler(handleLogout)).Methods("GET").Name("logout_route")
+  router.HandleFunc("/login", makeHandler(handleLogin)).Methods("POST").Name("login_route")
+  router.HandleFunc("/login", makeHandler(handleLogin)).Methods("POST").Name("login_route")
+  router.HandleFunc("/authorize", handleAuthorize).Methods("GET").Name("fb_authe_route")
+  router.HandleFunc("/facebook/redir", handleOAuth2Callback)
 
   // Router 404 handler
   router.NotFoundHandler = http.HandlerFunc(notfoundHandler)
@@ -53,12 +55,11 @@ func main() {
   // Registering router
   http.Handle("/", router)
 
-
   // Handling statid assets
   http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets/"))))
 
   // Start server
-  if err :=http.ListenAndServe(":3000", nil); err != nil {
+  if err := http.ListenAndServe(":3000", nil); err != nil {
     log.Fatal("ListenAndServe: ", err)
   }
 }

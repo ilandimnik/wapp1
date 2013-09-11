@@ -1,12 +1,15 @@
 development:
   db_url: localhost  
   db_name: webgo_development
+  domain: localhost:3000
 
 testing:
   db_url: localhost  
   db_name: webgo_testing 
+  domain: localhost:3000
 
 production:
   db_url: localhost  
   db_name: webgo_production
+  domain: localhost:3000
 

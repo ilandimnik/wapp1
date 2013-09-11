@@ -19,7 +19,7 @@ func init() {
     log.Fatalf("readfile(%q): %s", cfg_file, err)
   }
 
-  params := []string{"db_url", "db_name"}
+  params := []string{"db_url", "db_name", "domain"}
 
   for _, param := range params {
     val, err := yaml_config.Get("development." + param)
