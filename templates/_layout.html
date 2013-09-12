@@ -19,7 +19,7 @@
         </style>
         <link rel="stylesheet" href="../assets/css/bootstrap-theme.min.css">
         <link rel="stylesheet" href="../assets/css/main.css">
-
+        <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
         <script src="../assets/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js"></script>
     </head>
     <body>
@@ -71,7 +71,9 @@
             </form>
             <ul class="nav navbar-nav navbar-right">
               <li><a href="{{ reverse "signup_route"   }}">Register</a></li>
-              <li><a href="{{ reverse "fb_authe_route" }}">Facebook</a></li>
+              <li><a href="{{ reverse "fb_authe_route" }}" style="padding-top:10px;padding-bottom:10px;">
+                <i class="icon-facebook-sign icon-2x" ></i>
+              </a></li>
             </ul>
           {{end}}
        </div><!--/.navbar-collapse -->

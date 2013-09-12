@@ -10,19 +10,19 @@ import (
 )
 
 var (
-  ErrCSRFMissing            = errors.New("CSRF token is missing")
-  ErrCSRFDoesNotMatch       = errors.New("CSRF token does not match")
-  ErrPasswordTooShort       = errors.New("Password should be at least 6 characters")
-  ErrIllegalEmail           = errors.New("Illegal email")
-  ErrEmailAlreadyRegistered = errors.New("Email already registered")
-  ErrRegistering            = errors.New("Error registering. Please try again later.")
+  ErrCSRFMissing            = errors.New(msgCSRFMissing)
+  ErrCSRFDoesNotMatch       = errors.New(msgCSRFDoesNotMatch)
+  ErrPasswordTooShort       = errors.New(msgPasswordTooShort)
+  ErrIllegalEmail           = errors.New(msgIllegalEmail)
+  ErrEmailAlreadyRegistered = errors.New(msgEmailAlreadyRegistered)
+  ErrRegistering            = errors.New(msgRegistering)
 )
 
 type User struct {
   ID       bson.ObjectId `bson:"_id,omitempty"`
   Created  time.Time     `bson:"c"`
   Updated  time.Time     `bson:"u,omitempty"`
-  Email    string        
+  Email    string
   Password []byte
 }
 

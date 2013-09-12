@@ -6,6 +6,7 @@ import (
   "log"
   "net/http"
   "time"
+  "fmt"
 )
 
 
@@ -49,18 +50,18 @@ func handleCreateUser(w http.ResponseWriter, req *http.Request, ctx *Context) (e
 
 
   if err := ctx.C("users").Insert(u); err != nil {
-    ctx.Session.AddFlash("Problem registering user.")
+    ctx.Session.AddFlash(msgUserRegisterFail, "danger")
     return handleNewUser(w, req, ctx)
   }
 
   //store the user id in the values and redirect to index
   ctx.Session.Values["user"] = u.ID
-  ctx.Session.AddFlash("Welcome " + email + ".", "success")
+  ctx.Session.AddFlash(fmt.Sprintf(msgWelcomeNewUser,  email), "success")
   http.Redirect(w, req, reverse("homepage_route"), http.StatusSeeOther)
   return nil
 }
 
-
+// handleLogout deletes the session user value and redirect to the homepage
 func handleLogout(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
   delete(ctx.Session.Values, "user")
   http.Redirect(w, req, reverse("homepage_route"), http.StatusSeeOther)
@@ -73,16 +74,23 @@ func handleLogin(w http.ResponseWriter, req *http.Request, ctx *Context) (err er
 
   user, e := Login(ctx, email, password)
   if e != nil {
-    ctx.Session.AddFlash("Invalid Username/Password", "danger")
+    ctx.Session.AddFlash(msgInvalidUserPassword, "danger")
     http.Redirect(w, req, reverse("homepage_route"), http.StatusSeeOther)
     return nil
   }
 
   //store the user id in the values and redirect to index
   ctx.Session.Values["user"] = user.ID
-  ctx.Session.AddFlash("Welcome back " + email + ".", "success")
+  ctx.Session.AddFlash(fmt.Sprintf(msgWelcomeUser,email), "success")
   http.Redirect(w, req, reverse("homepage_route"), http.StatusSeeOther)
   return nil
+}
+
+// photoIndexHandler displays the progress bar and photo list 
+func handlePhotosIndex(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
+  return T("photos_index.html").Execute(w, map[string]interface{}{
+    "ctx": ctx,
+  })
 }
 
 
