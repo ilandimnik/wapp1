@@ -3,11 +3,11 @@ package main
 import (
   "code.google.com/p/goauth2/oauth"
   "encoding/json"
+  "fmt"
   "labix.org/v2/mgo/bson"
   "log"
   "net/http"
   "time"
-  "fmt"
 )
 
 type FBUserData struct {
@@ -60,7 +60,6 @@ func handleOAuth2Callback(w http.ResponseWriter, r *http.Request, ctx *Context) 
   }
   var fbuserdata FBUserData
   if resp.StatusCode == 200 { // OK 
-
     if err = json.NewDecoder(resp.Body).Decode(&fbuserdata); err != nil {
       log.Println(err)
     }
@@ -70,6 +69,7 @@ func handleOAuth2Callback(w http.ResponseWriter, r *http.Request, ctx *Context) 
     http.Redirect(w, r, reverse("homepage_route"), http.StatusSeeOther)
     return nil
   }
+
 
   // Check user email isn't empty
   if fbuserdata.Email == "" {
@@ -82,45 +82,53 @@ func handleOAuth2Callback(w http.ResponseWriter, r *http.Request, ctx *Context) 
   u := User{}
   err = ctx.C("users").Find(bson.M{"email": fbuserdata.Email}).One(&u)
   if err != nil {
-    log.Println(err)
-    ctx.Session.AddFlash(msgFBFailedRetrieveUserInfo, "danger")
-    http.Redirect(w, r, reverse("homepage_route"), http.StatusSeeOther)
-    return nil
-  }
-
-  //user doesn't exist - we need to create one
-  if u.ID == "" {
+    // not found
     new_u := User{
       Email:   fbuserdata.Email,
-      ID:      bson.NewObjectId(),  
+      ID:      bson.NewObjectId(),
       Created: time.Now(),
     }
     if err := ctx.C("users").Insert(&new_u); err != nil {
+      log.Println(err)
       ctx.Session.AddFlash(msgUserRegisterFail, "danger")
       return handleNewUser(w, r, ctx)
     }
     u = new_u
-  }
+  } 
 
-  //create new identity
-  identity := Identity {
-    ID:      bson.NewObjectId(),
-    Created: time.Now(),
-    UID: fbuserdata.Id,
-    User_id: u.ID,
-    AccessToken: t.AccessToken,
-    RefreshToken: t.RefreshToken,
-    TokenExpiry: t.Expiry,
-  }
-
-  if err := ctx.C("identities").Insert(&identity); err != nil {
-    ctx.Session.AddFlash(msgUserRegisterFail, "danger")
-    return handleNewUser(w, r, ctx)
+  // check if the user already have a facebook identity document
+  identity := Identity{}
+  if err = ctx.C("identities").Find(bson.M{"user_id": u.ID}).One(&identity); err != nil {
+    // if there wasn't an idenity, create one
+    //create new identity
+    identity := Identity{
+      ID:           bson.NewObjectId(),
+      Created:      time.Now(),
+      UID:          fbuserdata.Id,
+      User_id:      u.ID,
+      AccessToken:  t.AccessToken,
+      RefreshToken: t.RefreshToken,
+      TokenExpiry:  t.Expiry,
+      SNetwork:     "Facebook",
+    }
+    if err := ctx.C("identities").Insert(&identity); err != nil {
+      log.Println(err)
+      ctx.Session.AddFlash(msgUserRegisterFail, "danger")
+      return handleNewUser(w, r, ctx)
+    }
+  } else {
+    colQuerier := bson.M{"_id": identity.ID}
+    change := bson.M{"$set": bson.M{"Updated": time.Now(), "AccessToken": t.AccessToken, "RefreshToken": t.RefreshToken, "TokenExpiry": t.Expiry}}
+    if err := ctx.C("identities").Update(colQuerier, change); err != nil {
+      log.Println(err)
+      ctx.Session.AddFlash(msgUserRegisterFail, "danger")
+      http.Redirect(w, r, reverse("homepage_route"), http.StatusSeeOther)
+    }
   }
 
   // User
   ctx.Session.Values["user"] = u.ID
-  ctx.Session.AddFlash(fmt.Sprintf(msgWelcomeNewUser,  u.Email), "success")
+  ctx.Session.AddFlash(fmt.Sprintf(msgWelcomeNewUser, u.Email), "success")
   http.Redirect(w, r, reverse("homepage_route"), http.StatusSeeOther)
   return nil
 

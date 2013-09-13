@@ -12,8 +12,9 @@ type Identity struct {
   UID          string        `bson:"uid"`
   AccessToken  string
   RefreshToken string
+  SNetwork     string
   TokenExpiry  time.Time
-  User_id      bson.ObjectId `bson:"omitempty"`
+  User_id      bson.ObjectId 
 }
 
 
