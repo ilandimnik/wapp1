@@ -37,7 +37,6 @@ func handleCreateUser(w http.ResponseWriter, req *http.Request, ctx *Context) (e
     ctx.Session.AddFlash(err.Error()+".", "danger")
     http.Redirect(w, req, reverse("signup_route"), http.StatusSeeOther)
     return nil
-//    return handleNewUser(w, req, ctx)
   }
 
   u := &User{
@@ -46,7 +45,6 @@ func handleCreateUser(w http.ResponseWriter, req *http.Request, ctx *Context) (e
     Created: time.Now(),
   }
   u.SetPassword(password)
-
 
 
   if err := ctx.C("users").Insert(u); err != nil {

@@ -3,11 +3,18 @@ package main
 import (
   "code.google.com/p/goauth2/oauth"
   "encoding/json"
+  "errors"
   "fmt"
   "labix.org/v2/mgo/bson"
   "log"
   "net/http"
   "time"
+  "io/ioutil"
+)
+
+var (
+  ErrInternalError       = errors.New(msgInternalError)
+  ErrUnableToObtainToken = errors.New(msgUnableToObtainToken)
 )
 
 type FBUserData struct {
@@ -20,6 +27,37 @@ type FBUserData struct {
   Email      string
 }
 
+type FBPhotos struct {
+  Id     string `json:"id"`
+  Photos FBPhoto
+}
+
+type FBPhoto struct {
+  Data   []FBPhotoData
+  Paging FBPaging
+}
+
+type FBPaging struct {
+  Previous string
+  Next     string
+}
+
+type FBPhotoData struct {
+  Id      string
+  Pictrue string
+  Source  string
+  Height  int
+  Width   int
+  Images  []FBImage
+  Link    string
+}
+
+type FBImage struct {
+  Source string
+  Height int
+  Width  int
+}
+
 var oauthCfg = &oauth.Config{ //setup
   ClientId:     "1386314934930605",
   ClientSecret: "38c8bffc9e8eba7e8c4e216af883b9ab",
@@ -29,7 +67,7 @@ var oauthCfg = &oauth.Config{ //setup
   Scope: "",
 }
 
-func handleAuthorize(w http.ResponseWriter, r *http.Request) {
+func handleAuthorize(w http.ResponseWriter, r *http.Request, ctx *Context) (err error) {
 
   oauthCfg.RedirectURL = "http://" + config["domain"] + "/facebook/redir"
 
@@ -38,6 +76,7 @@ func handleAuthorize(w http.ResponseWriter, r *http.Request) {
 
   //redirect user to that page
   http.Redirect(w, r, url, http.StatusFound)
+  return nil
 }
 
 // handleOAuth2Callback handles the callback from the Google server
@@ -70,7 +109,6 @@ func handleOAuth2Callback(w http.ResponseWriter, r *http.Request, ctx *Context) 
     return nil
   }
 
-
   // Check user email isn't empty
   if fbuserdata.Email == "" {
     ctx.Session.AddFlash(msgFBFailedRetrieveUserInfo, "danger")
@@ -94,7 +132,7 @@ func handleOAuth2Callback(w http.ResponseWriter, r *http.Request, ctx *Context) 
       return handleNewUser(w, r, ctx)
     }
     u = new_u
-  } 
+  }
 
   // check if the user already have a facebook identity document
   identity := Identity{}
@@ -129,34 +167,111 @@ func handleOAuth2Callback(w http.ResponseWriter, r *http.Request, ctx *Context) 
   // User
   ctx.Session.Values["user"] = u.ID
   ctx.Session.AddFlash(fmt.Sprintf(msgWelcomeNewUser, u.Email), "success")
+
+  uc := NewUCache(ctx.Session.Values["user"].(bson.ObjectId))
+  oauthCfg.TokenCache = uc
+  getUserPhotos(uc)
+  uc.Close()
+
   http.Redirect(w, r, reverse("homepage_route"), http.StatusSeeOther)
   return nil
+}
 
-  // Get user data
+// getUserPhotos fetch all the photos from the user account
+func getUserPhotos(u *UCache) error {
+  oauthCfg.TokenCache = u
+  t := &oauth.Transport{Config: oauthCfg}
+  token, err := oauthCfg.TokenCache.Token()
 
-  //  // Get all user details
-  //resp, err := t.Client().Get("https://graph.facebook.com/me")
-  //  resp, err := t.Client().Get("https://graph.facebook.com/me?fields=id,name,email,photos,albums")
-  //
-  //  if err != nil {
-  //    fmt.Println("Received error:" + err.Error())
-  //  }
-  //
-  //  fmt.Println("Received Response")
-  //  fmt.Println(resp)
-  //
-  //  if resp.StatusCode == 200 { // OK 
-  //    bodyBytes, _ := ioutil.ReadAll(resp.Body) 
-  //    bodyString := string(bodyBytes) 
-  //    fmt.Println(bodyString)
-  //  }
-  //
+  if err != nil {
+    log.Println(msgUnableToObtainToken)
+    return ErrUnableToObtainToken
+  }
+  t.Token = token
 
-  //now get user data based on the Transport which has the token
-  //    resp, _ := t.Client().Get(profileInfoURL)
-  //
-  //    buf := make([]byte, 1024)
-  //    resp.Body.Read(buf)
-  //    userInfoTemplate.Execute(w, string(buf))
+  //Get all user details
+  identity := Identity{}
+  if err := u.C("identities").Find(bson.M{"user_id": u.Id}).One(&identity); err != nil {
+    log.Println("Received error from facebook...")
+    return ErrUnableToObtainToken
+  }
+
+  resp, err := t.Client().Get("https://graph.facebook.com/" + identity.UID + "?fields=photos")
+  if err != nil {
+    log.Println("Received error from facebook...")
+  }
+
+
+//  for {
+    fbphotos := FBPhotos{}
+    if resp.StatusCode == 200 { // OK 
+      if err = json.NewDecoder(resp.Body).Decode(&fbphotos); err != nil {
+        log.Println(err)
+      }
+      fmt.Println("After first decode...")
+      fmt.Println(fbphotos)
+
+
+      for _, photo := range fbphotos.Photos.Data {
+        ph := Photo{}
+        if err = u.C("photos").Find(bson.M{"user_id": u.Id, "fb_photo_id": photo.Id}).One(&ph); err != nil {
+          // if we couldn't find it, create a new one
+          ph = Photo{
+            ID:          bson.NewObjectId(),
+            Created:     time.Now(),
+            User_id:     u.Id,
+            FB_photo_id: photo.Id,
+            Source:      photo.Source,
+            Width:       photo.Width,
+            Height:      photo.Height,
+          }
+          if err := u.C("photos").Insert(&ph); err != nil {
+            log.Println(err)
+          }
+        } else {
+          // other wise just update
+          colQuerier := bson.M{"_id": ph.ID}
+          change := bson.M{"$set": bson.M{"Updated": time.Now(), "Source": photo.Source, "Width": photo.Width, "Height": photo.Height}}
+          if err := u.C("identities").Update(colQuerier, change); err != nil {
+            log.Println(err)
+          }
+        }
+      }
+      //    fmt.Println("Photos result")
+      //    fmt.Println(fbphotos)
+
+
+      fmt.Println("Getting previous data from " + fbphotos.Photos.Paging.Previous)
+      fmt.Println("Getting next data from " + fbphotos.Photos.Paging.Next)
+
+
+      if fbphotos.Photos.Paging.Next != fbphotos.Photos.Paging.Previous {
+        fmt.Println("Getting next data from " + fbphotos.Photos.Paging.Next)
+        resp, err = t.Client().Get(fbphotos.Photos.Paging.Next)
+        if err != nil {
+          log.Println("Received error from facebook...")
+    //      break
+        }
+        if resp.StatusCode == 200 { // OK 
+          bodyBytes, _ := ioutil.ReadAll(resp.Body) 
+          bodyString := string(bodyBytes) 
+          fmt.Println(bodyString)
+        }
+
+
+
+      } else {
+   //     break
+      }
+    } else {
+  //    break
+    }
+  //}
+
+  // if resp.StatusCode == 200 { // OK 
+  //   bodyBytes, _ := ioutil.ReadAll(resp.Body) 
+  //   bodyString := string(bodyBytes) 
+  //   fmt.Println(bodyString)
+  // }
   return nil
 }

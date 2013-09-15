@@ -12,4 +12,6 @@ const (
   msgWelcomeUser              = "Welcome back %s"
   msgWelcomeNewUser           = "Welcome %s"
   msgFBFailedRetrieveUserInfo = "Unable to retreive user information from facebook"
+  msgInternalError            = "Internal error"
+  msgUnableToObtainToken      = "Unable to obtain user token"
 )

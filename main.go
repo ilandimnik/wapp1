@@ -47,7 +47,7 @@ func main() {
   router.HandleFunc("/login", makeHandler(handleLogin)).Methods("POST").Name("login_route")
   router.HandleFunc("/login", makeHandler(handleLogin)).Methods("POST").Name("login_route")
   router.HandleFunc("/photos", makeHandler(handlePhotosIndex)).Methods("GET").Name("photos_index_route")
-  router.HandleFunc("/authorize", handleAuthorize).Methods("GET").Name("fb_authe_route")
+  router.HandleFunc("/authorize", makeHandler(handleAuthorize)).Methods("GET").Name("fb_authe_route")
   router.HandleFunc("/facebook/redir", makeHandler(handleOAuth2Callback))
 
   // Router 404 handler
