@@ -8,5 +8,5 @@ It includes:
 +  Bootstrap 3
 +  Authorization (register, login, logout)
 +  Facebook authorization including managing ideneities (to allow multiple service login per users)
-+  Work in progress
++  Reads all user photos and stores them in the database (blocking) 
 
