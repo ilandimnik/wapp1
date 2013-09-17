@@ -10,3 +10,4 @@ It includes:
 +  Facebook authorization including managing ideneities (to allow multiple service login per users)
 +  Reads all user photos and stores them in the database (blocking) 
 
+

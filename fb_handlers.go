@@ -184,12 +184,12 @@ func handleOAuth2Callback(w http.ResponseWriter, r *http.Request, ctx *Context) 
   ctx.Session.Values["user"] = u.ID
   ctx.Session.AddFlash(fmt.Sprintf(msgWelcomeNewUser, u.Email), "success")
 
-  uc := NewUCache(ctx.Session.Values["user"].(bson.ObjectId))
-  oauthCfg.TokenCache = uc
-  getUserPhotos(uc)
-  uc.Close()
+//  uc := NewUCache(ctx.Session.Values["user"].(bson.ObjectId))
+//  oauthCfg.TokenCache = uc
+//  go getUserPhotos(uc)
 
-  http.Redirect(w, r, reverse("homepage_route"), http.StatusSeeOther)
+  //http.Redirect(w, r, reverse("homepage_route"), http.StatusSeeOther)
+  http.Redirect(w, r, reverse("photos_index_route"), http.StatusSeeOther)
   return nil
 }
 
@@ -197,6 +197,7 @@ func handleOAuth2Callback(w http.ResponseWriter, r *http.Request, ctx *Context) 
 // getUserPhotos fetch all the photos from the user account
 //
 func getUserPhotos(u *UCache) error {
+  defer u.Close()
   oauthCfg.TokenCache = u
   t := &oauth.Transport{Config: oauthCfg}
   token, err := oauthCfg.TokenCache.Token()
@@ -269,7 +270,8 @@ func getUserPhotos(u *UCache) error {
       }
     }
   }
-
+  fmt.Println("Sending message...")
+  ws_chan<- "Done downloading" 
   return nil
 }
 

@@ -86,10 +86,20 @@ func handleLogin(w http.ResponseWriter, req *http.Request, ctx *Context) (err er
 
 // photoIndexHandler displays the progress bar and photo list 
 func handlePhotosIndex(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
+  session_id := ctx.Session.Values["user"].(bson.ObjectId)
+  
   return T("photos_index.html").Execute(w, map[string]interface{}{
     "ctx": ctx,
+    "session_id": session_id.Hex(),
+    "test": "wow!",
   })
 }
 
+type Message struct {
+    RequestID      int
+    Command        string
+    SomeOtherThing string
+    Success        bool
+}
 
 

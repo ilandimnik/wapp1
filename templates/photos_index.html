@@ -5,4 +5,10 @@
       Working on obtaining your photo data...
     </h2>
   </div> <!-- /container -->
+
+
+  {{if .ctx.Session.Values.user }}
+  <span class="session-info" data-session="{{ .session_id }}"></span>
+  {{end}}
+
 {{ end }}

@@ -8,6 +8,7 @@ import (
   "labix.org/v2/mgo/bson"
   "log"
   "net/http"
+  "code.google.com/p/go.net/websocket"
 )
 
 func init() {
@@ -18,6 +19,7 @@ var store sessions.Store
 var session *mgo.Session
 var router *mux.Router
 
+var ws_chan = make(chan string)
 
 func main() {
   var err error
@@ -48,7 +50,7 @@ func main() {
   router.HandleFunc("/login", makeHandler(handleLogin)).Methods("POST").Name("login_route")
   router.HandleFunc("/photos", makeHandler(handlePhotosIndex)).Methods("GET").Name("photos_index_route")
   router.HandleFunc("/authorize", makeHandler(handleAuthorize)).Methods("GET").Name("fb_authe_route")
-  router.HandleFunc("/facebook/redir", makeHandler(handleOAuth2Callback))
+  router.HandleFunc("/facebook/redir", makeHandler(handleOAuth2Callback)) 
 
   // Router 404 handler
   router.NotFoundHandler = http.HandlerFunc(notfoundHandler)
@@ -59,8 +61,17 @@ func main() {
   // Handling statid assets
   http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets/"))))
 
+  // Register websocket handler
+  go h.run()
+  http.Handle("/ws", websocket.Handler(wsHandler))
+
+
+
   // Start server
   if err := http.ListenAndServe(":3000", nil); err != nil {
     log.Fatal("ListenAndServe: ", err)
   }
+
 }
+
+

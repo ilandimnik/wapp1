@@ -1,10 +1,10 @@
 package main
 
 import (
-  "html/template"
-  "path/filepath"
   "fmt"
+  "html/template"
   "net/http"
+  "path/filepath"
   "thegoods.biz/httpbuf"
 )
 
@@ -47,35 +47,31 @@ func T(name string) *template.Template {
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, *Context) error) http.HandlerFunc {
   return func(w http.ResponseWriter, req *http.Request) {
-      //create the context
+    //create the context
 
-      ctx, err := NewContext(req)
+    ctx, err := NewContext(req)
 
-      if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-      }
-      defer ctx.Close()
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
+    defer ctx.Close()
 
-      //run the handler and grab the error, and report it
-      buf := new(httpbuf.Buffer)
-      err = fn(buf, req, ctx)
-      if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-      }
-    
-      //save the session
-      if err = ctx.Session.Save(req, buf); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-      }
-    
-      //apply the buffered response to the writer
-      buf.Apply(w)
+    //run the handler and grab the error, and report it
+    buf := new(httpbuf.Buffer)
+    err = fn(buf, req, ctx)
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
+
+    //save the session
+    if err = ctx.Session.Save(req, buf); err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
+
+    //apply the buffered response to the writer
+    buf.Apply(w)
   }
 }
-
-
-
-
